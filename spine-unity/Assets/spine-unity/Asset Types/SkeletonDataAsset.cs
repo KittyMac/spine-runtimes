@@ -134,11 +134,10 @@ namespace Spine.Unity {
 					//stopwatch.Start();
 					skeletonData = binary.ReadSkeletonData(input);
 				} else {
-					var input = new StringReader(skeletonJSON.text);
 					var json = new SkeletonJson(attachmentLoader);
 					json.Scale = skeletonDataScale;
 					//stopwatch.Start();
-					skeletonData = json.ReadSkeletonData(input);
+					skeletonData = json.ReadSkeletonData(skeletonJSON.bytes);
 				}
 				//stopwatch.Stop();
 				//Debug.Log(stopwatch.Elapsed);

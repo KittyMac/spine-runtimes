@@ -38,6 +38,25 @@ using System.Collections.Generic;
 
 namespace Spine {
 	public static class Json {
+
+		public static object Deserialize (byte[] text) {
+
+			#if UNITY_EDITOR
+			long b = GC.GetTotalMemory (true);
+			#endif
+
+			var parser = new SharpJson.JsonDecoder ();
+			parser.parseNumbersAsFloat = true;
+			object jsonContent = parser.DecodeBytes (text);
+
+			#if UNITY_EDITOR
+			long a = GC.GetTotalMemory (true);
+			UnityEngine.Debug.Log (string.Format ("JSON memory usage: {0} MB", (a - b) / 1024.0f / 1024.0f));
+			#endif
+
+			return jsonContent;
+		}
+
 		public static object Deserialize (TextReader text) {
 			var parser = new SharpJson.JsonDecoder();
 			parser.parseNumbersAsFloat = true;
@@ -79,6 +98,9 @@ namespace SharpJson
 {
 	class Lexer
 	{
+		private Dictionary<string,string> duplicatedStrings = new Dictionary<string, string>();
+		private Dictionary<float,object> duplicatedFloats = new Dictionary<float, object>();
+
 		public enum Token {
 			None,
 			Null,
@@ -110,16 +132,24 @@ namespace SharpJson
 			set;
 		}
 
-		char[] json;
+		byte[] json;
 		int index = 0;
 		bool success = true;
 		char[] stringBuffer = new char[4096];
+
+		public Lexer(byte[] jsonArray)
+		{
+			Reset();
+
+			json = jsonArray;
+			parseNumbersAsFloat = false;
+		}
 
 		public Lexer(string text)
 		{
 			Reset();
 
-			json = text.ToCharArray();
+			json = Encoding.ASCII.GetBytes (text);
 			parseNumbersAsFloat = false;
 		}
 
@@ -133,12 +163,190 @@ namespace SharpJson
 		public string ParseString()
 		{
 			int idx = 0;
-			StringBuilder builder = null;
-			
+
 			SkipWhiteSpaces();
+
+
+			// special case the mose often repeated strings
+			// "time"
+			if (json [index + 1] == 't' && 
+				json [index + 2] == 'i' && 
+				json [index + 3] == 'm' && 
+				json [index + 4] == 'e' &&
+				json [index + 5] == '"') {
+				index += 6;
+				return "time";
+			}
+
+			// "name"
+			if (json [index + 1] == 'n' && 
+				json [index + 2] == 'a' && 
+				json [index + 3] == 'm' && 
+				json [index + 4] == 'e' &&
+				json [index + 5] == '"') {
+				index += 6;
+				return "name";
+			}
+
+			// "hull"
+			if (json [index + 1] == 'h' && 
+				json [index + 2] == 'u' && 
+				json [index + 3] == 'l' && 
+				json [index + 4] == 'l' &&
+				json [index + 5] == '"') {
+				index += 6;
+				return "hull";
+			}
+
+			// "type"
+			if (json [index + 1] == 't' && 
+				json [index + 2] == 'y' && 
+				json [index + 3] == 'p' && 
+				json [index + 4] == 'e' &&
+				json [index + 5] == '"') {
+				index += 6;
+				return "type";
+			}
+
+			// "width"
+			if (json [index + 1] == 'w' && 
+				json [index + 2] == 'i' && 
+				json [index + 3] == 'd' && 
+				json [index + 4] == 't' &&
+				json [index + 5] == 'h' &&
+				json [index + 6] == '"') {
+				index += 7;
+				return "width";
+			}
+
+			// "height"
+			if (json [index + 1] == 'h' && 
+				json [index + 2] == 'e' && 
+				json [index + 3] == 'i' && 
+				json [index + 4] == 'g' &&
+				json [index + 5] == 'h' &&
+				json [index + 6] == 't' &&
+				json [index + 7] == '"') {
+				index += 8;
+				return "height";
+			}
+
+			// "curve"
+			if (json [index + 1] == 'c' && 
+				json [index + 2] == 'u' && 
+				json [index + 3] == 'r' && 
+				json [index + 4] == 'v' &&
+				json [index + 5] == 'e' &&
+				json [index + 6] == '"') {
+				index += 7;
+				return "curve";
+			}
+
+			// "angle"
+			if (json [index + 1] == 'a' && 
+				json [index + 2] == 'n' && 
+				json [index + 3] == 'g' && 
+				json [index + 4] == 'l' &&
+				json [index + 5] == 'e' &&
+				json [index + 6] == '"') {
+				index += 7;
+				return "angle";
+			}
+
+			// "rotate"
+			if (json [index + 1] == 'r' && 
+				json [index + 2] == 'o' && 
+				json [index + 3] == 't' && 
+				json [index + 4] == 'a' &&
+				json [index + 5] == 't' &&
+				json [index + 6] == 'e' &&
+				json [index + 7] == '"') {
+				index += 8;
+				return "rotate";
+			}
+
+			// "scale"
+			if (json [index + 1] == 's' && 
+				json [index + 2] == 'c' && 
+				json [index + 3] == 'a' && 
+				json [index + 4] == 'l' &&
+				json [index + 5] == 'e' &&
+				json [index + 6] == '"') {
+				index += 7;
+				return "scale";
+			}
+
+			// "translate"
+			if (json [index + 1] == 't' && 
+				json [index + 2] == 'r' && 
+				json [index + 3] == 'a' && 
+				json [index + 4] == 'n' &&
+				json [index + 5] == 's' &&
+				json [index + 6] == 'l' &&
+				json [index + 7] == 'a' &&
+				json [index + 8] == 't' &&
+				json [index + 9] == 'e' &&
+				json [index + 10] == '"') {
+				index += 11;
+				return "translate";
+			}
+
+			// "stepped"
+			if (json [index + 1] == 's' && 
+				json [index + 2] == 't' && 
+				json [index + 3] == 'e' && 
+				json [index + 4] == 'p' &&
+				json [index + 5] == 'p' &&
+				json [index + 6] == 'e' &&
+				json [index + 7] == 'd' &&
+				json [index + 8] == '"') {
+				index += 9;
+				return "stepped";
+			}
+
+			// "attachment"
+			if (json [index + 1] == 'a' && 
+				json [index + 2] == 't' && 
+				json [index + 3] == 't' && 
+				json [index + 4] == 'a' &&
+				json [index + 5] == 'c' &&
+				json [index + 6] == 'h' &&
+				json [index + 7] == 'm' &&
+				json [index + 8] == 'e' &&
+				json [index + 9] == 'n' &&
+				json [index + 10] == 't' &&
+				json [index + 11] == '"') {
+				index += 12;
+				return "attachment";
+			}
+
+			// "x"
+			if (json [index + 1] == 'x' && 
+				json [index + 2] == '"') {
+				index += 3;
+				return "x";
+			}
+
+			// "y"
+			if (json [index + 1] == 'y' && 
+				json [index + 2] == '"') {
+				index += 3;
+				return "y";
+			}
+
+			// "z"
+			if (json [index + 1] == 'z' && 
+				json [index + 2] == '"') {
+				index += 3;
+				return "z";
+			}
+
+
+
+
 			
 			// "
-			char c = json[index++];
+			char c = (char)json[index++];
 			
 			bool failed = false;
 			bool complete = false;
@@ -147,7 +355,7 @@ namespace SharpJson
 				if (index == json.Length)
 					break;
 				
-				c = json[index++];
+				c = (char)json[index++];
 				if (c == '"') {
 					complete = true;
 					break;
@@ -155,7 +363,7 @@ namespace SharpJson
 					if (index == json.Length)
 						break;
 					
-					c = json[index++];
+					c = (char)json[index++];
 					
 					switch (c) {
 					case '"':
@@ -185,10 +393,10 @@ namespace SharpJson
 					case 'u':
 						int remainingLength = json.Length - index;
 						if (remainingLength >= 4) {
-							var hex = new string(json, index, 4);
+							//var hex = new string(json, index, 4);
 							
 							// XXX: handle UTF
-							stringBuffer[idx++] = (char) Convert.ToInt32(hex, 16);
+							//stringBuffer[idx++] = (char) Convert.ToInt32(hex, 16);
 							
 							// skip 4 chars
 							index += 4;
@@ -200,61 +408,55 @@ namespace SharpJson
 				} else {
 					stringBuffer[idx++] = c;
 				}
-				
-				if (idx >= stringBuffer.Length) {
-					if (builder == null)
-						builder = new StringBuilder();
-					
-					builder.Append(stringBuffer, 0, idx);
-					idx = 0;
-				}
 			}
 			
 			if (!complete) {
 				success = false;
 				return null;
 			}
-			
-			if (builder != null)
-				return builder.ToString ();
-			else
-				return new string (stringBuffer, 0, idx);
-		}
-		
-		string GetNumberString()
-		{
-			SkipWhiteSpaces();
 
-			int lastIndex = GetLastIndexOfNumber(index);
-			int charLength = (lastIndex - index) + 1;
-			
-			var result = new string (json, index, charLength);
-			
-			index = lastIndex + 1;
-			
-			return result;
+			string retString = new string (stringBuffer, 0, idx);
+			if (duplicatedStrings.ContainsKey (retString)) {
+				return duplicatedStrings[retString];
+			}
+
+			duplicatedStrings [retString] = retString;
+			return retString;
 		}
 
-		public float ParseFloatNumber()
+		public object ParseFloatNumber()
 		{
-			float number;
-			var str = GetNumberString ();
-			
-			if (!float.TryParse (str, NumberStyles.Float, CultureInfo.InvariantCulture, out number))
-				return 0;
-			
-			return number;
+			// reduce boxing of floats by detecting duplicated float objects
+			float f;
+
+			if (json [index + 0] == '0' && json [index + 1] == ',') {
+				index += 2;
+				f = 0.0f;
+			} else if (json [index + 0] == '1' && json [index + 1] == ',') {
+				index += 2;
+				f = 1.0f;
+			} else {
+				f = FastParse.atof (json, ref index);
+			}
+
+			if (duplicatedFloats.ContainsKey (f)) {
+				return duplicatedFloats[f];
+			}
+			duplicatedFloats [f] = f;
+			return duplicatedFloats [f];
 		}
 
 		public double ParseDoubleNumber()
 		{
-			double number;
-			var str = GetNumberString ();
-			
-			if (!double.TryParse(str, NumberStyles.Any, CultureInfo.InvariantCulture, out number))
+			if (json [index + 0] == '0' && json [index + 1] == ',') {
+				index += 2;
 				return 0;
-			
-			return number;
+			}
+			if (json [index + 0] == '1' && json [index + 1] == ',') {
+				index += 2;
+				return 1;
+			}
+			return FastParse.atof (json, ref index);
 		}
 		
 		int GetLastIndexOfNumber(int index)
@@ -262,7 +464,7 @@ namespace SharpJson
 			int lastIndex;
 			
 			for (lastIndex = index; lastIndex < json.Length; lastIndex++) {
-				char ch = json[lastIndex];
+				char ch = (char)json[lastIndex];
 				
 				if ((ch < '0' || ch > '9') && ch != '+' && ch != '-'
 				    && ch != '.' && ch != 'e' && ch != 'E')
@@ -272,15 +474,73 @@ namespace SharpJson
 			return lastIndex - 1;
 		}
 
+
+		public void SkipThisObject()
+		{
+			int curlyLevel = 0;
+
+			// find the first '{'
+			for (; index < json.Length; index++) {
+				char ch = (char)json [index];
+				if (ch == '{' || ch == ']') {
+					curlyLevel++;
+					index++;
+					break;
+				}
+			}
+
+			for (; index < json.Length; index++) {
+				char ch = (char)json[index];
+
+				if (ch == '{' || ch == '[')
+					curlyLevel++;
+
+				if (ch == '}' || ch == ']')
+					curlyLevel--;
+				
+				if (curlyLevel <= 0) {
+					index++;
+					break;
+				}
+			}
+		}
+
+		public int EstimateNumberOfObjectsInThisTable()
+		{
+			int curlyLevel = 0;
+			int numObjects = 1;
+
+			int tempIndex = index+1;
+			for (; tempIndex < json.Length; tempIndex++) {
+				char ch = (char)json[tempIndex];
+
+				if (ch == '{' || ch == '[')
+					curlyLevel++;
+
+				if (ch == '}' || ch == ']')
+					curlyLevel--;
+
+				if (curlyLevel == 0) {
+					if (ch == ',')
+						numObjects++;
+				}
+
+				if (curlyLevel < 0)
+					break;
+			}
+
+			return numObjects;
+		}
+
 		void SkipWhiteSpaces()
 		{
 			for (; index < json.Length; index++) {
-				char ch = json[index];
+				char ch = (char)json[index];
 
 				if (ch == '\n')
 					lineNumber++;
 
-				if (!char.IsWhiteSpace(json[index]))
+				if (!char.IsWhiteSpace((char)json[index]))
 					break;
 			}
 		}
@@ -299,12 +559,12 @@ namespace SharpJson
 			return NextToken(json, ref index);
 		}
 
-		static Token NextToken(char[] json, ref int index)
+		static Token NextToken(byte[] json, ref int index)
 		{
 			if (index == json.Length)
 				return Token.None;
 			
-			char c = json[index++];
+			char c = (char)json[index++];
 			
 			switch (c) {
 			case '{':
@@ -389,6 +649,16 @@ namespace SharpJson
 			parseNumbersAsFloat = false;
 		}
 
+		public object DecodeBytes(byte[] jsonArray)
+		{
+			errorMessage = null;
+
+			lexer = new Lexer(jsonArray);
+			lexer.parseNumbersAsFloat = parseNumbersAsFloat;
+
+			return ParseValue();
+		}
+
 		public object Decode(string text)
 		{
 			errorMessage = null;
@@ -407,7 +677,10 @@ namespace SharpJson
 
 		IDictionary<string, object> ParseObject()
 		{
-			var table = new Dictionary<string, object>();
+			var table = new FastParse.MemoryLiteDictionary<string, object>();
+
+			// Estimate the number of objects that are going to go in this dictionary
+			table.SetCapacity (lexer.EstimateNumberOfObjectsInThisTable ());
 
 			// {
 			lexer.NextToken();
@@ -427,26 +700,34 @@ namespace SharpJson
 					return table;
 				default:
 					// name
-					string name = EvalLexer(lexer.ParseString());
+					string name = lexer.ParseString ();
+					/*
+					if (name.Contains ("TEST_") || name.Contains ("test_")) {
+						// If an artists labels an animation as test, let's not include it and save some memory
+						lexer.SkipThisObject();
+						break;
+					}*/
 
 					if (errorMessage != null)
 						return null;
 
 					// :
-					token = lexer.NextToken();
+					token = lexer.NextToken ();
 
 					if (token != Lexer.Token.Colon) {
-						TriggerError("Invalid token; expected ':'");
+						TriggerError ("Invalid token; expected ':'");
 						return null;
 					}
 					
 					// value
-					object value = ParseValue();
+					object value = ParseValue ();
 
 					if (errorMessage != null)
 						return null;
-					
-					table[name] = value;
+
+					if (value != null) {
+						table [name] = value;
+					}
 					break;
 				}
 			}
@@ -456,7 +737,8 @@ namespace SharpJson
 
 		IList<object> ParseArray()
 		{
-			var array = new List<object>();
+			var array = new FastParse.MemoryLiteList<object> ();
+			array.SetCapacity (lexer.EstimateNumberOfObjectsInThisTable ());
 			
 			// [
 			lexer.NextToken();
@@ -492,12 +774,13 @@ namespace SharpJson
 		{
 			switch (lexer.LookAhead()) {
 			case Lexer.Token.String:
-				return EvalLexer(lexer.ParseString());
+				return lexer.ParseString();
 			case Lexer.Token.Number:
-				if (parseNumbersAsFloat)
-					return EvalLexer(lexer.ParseFloatNumber());
-				else
-					return EvalLexer(lexer.ParseDoubleNumber());
+				if (parseNumbersAsFloat) {
+					return lexer.ParseFloatNumber ();
+				} else {
+					return lexer.ParseDoubleNumber ();
+				}
 			case Lexer.Token.CurlyOpen:
 				return ParseObject();
 			case Lexer.Token.SquaredOpen:
@@ -525,12 +808,5 @@ namespace SharpJson
 			                             message, lexer.lineNumber);
 		}
 
-		T EvalLexer<T>(T value)
-		{
-			if (lexer.hasError)
-				TriggerError("Lexical error ocurred");
-
-			return value;
-		}
 	}
 }
