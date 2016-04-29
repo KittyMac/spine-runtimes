@@ -50,6 +50,8 @@ namespace Spine.Unity {
 
 		public SkeletonDataAsset skeletonDataAsset;
 		public String initialSkinName;
+		public int cpuOptimizationLevel;
+		
 
 		#region Advanced
 		// Submesh Separation
@@ -206,9 +208,18 @@ namespace Spine.Unity {
 				OnRebuild(this);
 		}
 
+		private int skipFramesLateUpdate = 0;
 		public virtual void LateUpdate () {
 			if (!valid)
 				return;
+
+			if (cpuOptimizationLevel != 0) {
+				skipFramesLateUpdate--;
+				if (skipFramesLateUpdate > 0) {
+					return;
+				}
+				skipFramesLateUpdate = cpuOptimizationLevel + UnityEngine.Random.Range (0, cpuOptimizationLevel);
+			}
 
 			if (
 				(

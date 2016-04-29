@@ -67,9 +67,18 @@ namespace Spine.Unity {
 			lastTime = Time.time;
 		}
 
+		private int skipFramesUpdate = 0;
 		void Update () {
 			if (!valid)
 				return;
+
+			if (cpuOptimizationLevel != 0) {
+				skipFramesUpdate--;
+				if (skipFramesUpdate > 0) {
+					return;
+				}
+				skipFramesUpdate = cpuOptimizationLevel + UnityEngine.Random.Range (0, cpuOptimizationLevel);
+			}
 
 			if (layerMixModes.Length != animator.layerCount) {
 				System.Array.Resize<MixMode>(ref layerMixModes, animator.layerCount);

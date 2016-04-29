@@ -40,12 +40,14 @@ namespace Spine.Unity.Editor {
 		protected static bool advancedFoldout;
 
 		protected SerializedProperty skeletonDataAsset, initialSkinName, normals, tangents, meshes, immutableTriangles, separatorSlotNames, front, zSpacing;
+		protected SerializedProperty cpuOptimizationLevel_;
 
 		protected SpineInspectorUtility.SerializedSortingProperties sortingProperties;
 
 		protected virtual void OnEnable () {
 			SpineEditorUtilities.ConfirmInitialization();
 			skeletonDataAsset = serializedObject.FindProperty("skeletonDataAsset");
+			cpuOptimizationLevel_ = serializedObject.FindProperty("cpuOptimizationLevel");
 			initialSkinName = serializedObject.FindProperty("initialSkinName");
 			normals = serializedObject.FindProperty("calculateNormals");
 			tangents = serializedObject.FindProperty("calculateTangents");
@@ -107,6 +109,8 @@ namespace Spine.Unity.Editor {
 			{
 				SpineInspectorUtility.SortingPropertyFields(sortingProperties, applyModifiedProperties: true);
 			}
+			
+			EditorGUILayout.PropertyField(cpuOptimizationLevel_);
 
 			// More Render Options...
 			{
