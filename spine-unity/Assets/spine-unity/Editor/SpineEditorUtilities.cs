@@ -633,13 +633,13 @@ namespace Spine.Unity.Editor {
 			TextAsset spineJson = (TextAsset)AssetDatabase.LoadAssetAtPath(skeletonDataPath, typeof(TextAsset));
 
 			StringReader reader = new StringReader(spineJson.text);
-			var root = Json.Deserialize(reader) as Dictionary<string, object>;
+			var root = Json.Deserialize(reader) as IDictionary<string, object>;
 
-			foreach (KeyValuePair<string, object> entry in (Dictionary<string, object>)root["skins"]) {
-				foreach (KeyValuePair<string, object> slotEntry in (Dictionary<string, object>)entry.Value) {
+			foreach (KeyValuePair<string, object> entry in (IDictionary<string, object>)root["skins"]) {
+				foreach (KeyValuePair<string, object> slotEntry in (IDictionary<string, object>)entry.Value) {
 
-					foreach (KeyValuePair<string, object> attachmentEntry in ((Dictionary<string, object>)slotEntry.Value)) {
-						var data = ((Dictionary<string, object>)attachmentEntry.Value);
+					foreach (KeyValuePair<string, object> attachmentEntry in ((IDictionary<string, object>)slotEntry.Value)) {
+						var data = ((IDictionary<string, object>)attachmentEntry.Value);
 						if (data.ContainsKey("type")) {
 							if ((string)data["type"] == "boundingbox") {
 								continue;
@@ -717,12 +717,12 @@ namespace Spine.Unity.Editor {
 				return false;
 			}
 
-			Dictionary<string, object> root = (Dictionary<string, object>)obj;
+			IDictionary<string, object> root = (IDictionary<string, object>)obj;
 
 			if (!root.ContainsKey("skeleton"))
 				return false;
 
-			Dictionary<string, object> skeletonInfo = (Dictionary<string, object>)root["skeleton"];
+			IDictionary<string, object> skeletonInfo = (IDictionary<string, object>)root["skeleton"];
 
 			string spineVersion = (string)skeletonInfo["spine"];
 			//TODO:  reject old versions
