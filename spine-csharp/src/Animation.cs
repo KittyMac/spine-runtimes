@@ -440,6 +440,9 @@ namespace Spine {
 		}
 
 		public void Apply (Skeleton skeleton, float lastTime, float time, ExposedList<Event> firedEvents, float alpha) {
+			if (alpha > 0.2f) {
+				return;
+			}
 			float[] frames = this.frames;
 			if (time < frames[0]) {
 				if (lastTime > time) Apply(skeleton, lastTime, int.MaxValue, null, 0);
