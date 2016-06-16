@@ -47,7 +47,7 @@ namespace Spine {
 		public float Scale { get; set; }
 
 		private AttachmentLoader attachmentLoader;
-		private List<LinkedMesh> linkedMeshes = new List<LinkedMesh>();
+		private IList<LinkedMesh> linkedMeshes = new IList<LinkedMesh>();
 
 		public SkeletonJson (params Atlas[] atlasArray)
 			: this(new AtlasAttachmentLoader(atlasArray)) {
@@ -59,9 +59,7 @@ namespace Spine {
 			Scale = 1;
 		}
 
-		#if !(IS_UNITY)
-		#if WINDOWS_STOREAPP
-
+		#if !(IS_UNITY) && WINDOWS_STOREAPP
 		private async Task<SkeletonData> ReadFile(string path) {
 			var folder = Windows.ApplicationModel.Package.Current.InstalledLocation;
 			var file = await folder.GetFileAsync(path).AsTask().ConfigureAwait(false);
@@ -88,9 +86,7 @@ namespace Spine {
 				return skeletonData;
 			}
 		}
-
 		#endif // WINDOWS_STOREAPP
-		#endif // !UNITY
 
 		public SkeletonData ReadSkeletonData (byte[] jsonBytes) {
 			if (jsonBytes == null) throw new ArgumentNullException("reader cannot be null.");
@@ -125,6 +121,8 @@ namespace Spine {
 				boneData.rotation = GetFloat(boneMap, "rotation", 0);
 				boneData.scaleX = GetFloat(boneMap, "scaleX", 1);
 				boneData.scaleY = GetFloat(boneMap, "scaleY", 1);
+				boneData.shearX = GetFloat(boneMap, "shearX", 0);
+				boneData.shearY = GetFloat(boneMap, "shearY", 0);
 				boneData.inheritScale = GetBoolean(boneMap, "inheritScale", true);
 				boneData.inheritRotation = GetBoolean(boneMap, "inheritRotation", true);
 				skeletonData.bones.Add(boneData);
@@ -154,7 +152,7 @@ namespace Spine {
 
 			// Transform constraints.
 			if (root.ContainsKey("transform")) {
-			foreach (IDictionary<String, Object> transformMap in (IList<Object>)root["transform"]) {
+				foreach (IDictionary<String, Object> transformMap in (IList<Object>)root["transform"]) {
 					TransformConstraintData transformConstraintData = new TransformConstraintData((String)transformMap["name"]);
 
 					String boneName = (String)transformMap["bone"];
@@ -165,9 +163,17 @@ namespace Spine {
 					transformConstraintData.target = skeletonData.FindBone(targetName);
 					if (transformConstraintData.target == null) throw new Exception("Target bone not found: " + targetName);
 
+					transformConstraintData.offsetRotation = GetFloat(transformMap, "rotation", 0);
+					transformConstraintData.offsetX = GetFloat(transformMap, "x", 0) * scale;
+					transformConstraintData.offsetY = GetFloat(transformMap, "y", 0) * scale;
+					transformConstraintData.offsetScaleX = GetFloat(transformMap, "scaleX", 0);
+					transformConstraintData.offsetScaleY = GetFloat(transformMap, "scaleY", 0);
+					transformConstraintData.offsetShearY = GetFloat(transformMap, "shearY", 0);
+
+					transformConstraintData.rotateMix = GetFloat(transformMap, "rotateMix", 1);
 					transformConstraintData.translateMix = GetFloat(transformMap, "translateMix", 1);
-					transformConstraintData.x = GetFloat(transformMap, "x", 0) * scale;
-					transformConstraintData.y = GetFloat(transformMap, "y", 0) * scale;
+					transformConstraintData.scaleMix = GetFloat(transformMap, "scaleMix", 1);
+					transformConstraintData.shearMix = GetFloat(transformMap, "shearMix", 1);
 
 					skeletonData.transformConstraints.Add(transformConstraintData);
 				}
@@ -361,8 +367,8 @@ namespace Spine {
 					if (parent == null) {
 						float[] uvs = GetFloatArray(map, "uvs", 1);
 						float[] vertices = GetFloatArray(map, "vertices", 1);
-						var weights = new List<float>(uvs.Length * 3 * 3);
-						var bones = new List<int>(uvs.Length * 3);
+						var weights = new IList<float>(uvs.Length * 3 * 3);
+						var bones = new IList<int>(uvs.Length * 3);
 						for (int i = 0, n = vertices.Length; i < n;) {
 							int boneCount = (int)vertices[i++];
 							bones.Add(boneCount);
@@ -520,11 +526,13 @@ namespace Spine {
 							timelines.Add(timeline);
 							duration = Math.Max(duration, timeline.frames[timeline.FrameCount * 2 - 2]);
 
-						} else if (timelineName == "translate" || timelineName == "scale") {
+						} else if (timelineName == "translate" || timelineName == "scale" || timelineName == "shear") {
 							TranslateTimeline timeline;
 							float timelineScale = 1;
 							if (timelineName == "scale")
 								timeline = new ScaleTimeline(values.Count);
+							else if (timelineName == "shear")
+								timeline = new ShearTimeline(values.Count);
 							else {
 								timeline = new TranslateTimeline(values.Count);
 								timelineScale = scale;
@@ -549,12 +557,13 @@ namespace Spine {
 				}
 			}
 
+			// IK timelines.
 			if (map.ContainsKey("ik")) {
-				foreach (KeyValuePair<String, Object> ikMap in (IDictionary<String, Object>)map["ik"]) {
-					IkConstraintData ikConstraint = skeletonData.FindIkConstraint(ikMap.Key);
-					var values = (IList<Object>)ikMap.Value;
+				foreach (KeyValuePair<String, Object> constraintMap in (IDictionary<String, Object>)map["ik"]) {
+					IkConstraintData constraint = skeletonData.FindIkConstraint(constraintMap.Key);
+					var values = (IList<Object>)constraintMap.Value;
 					var timeline = new IkConstraintTimeline(values.Count);
-					timeline.ikConstraintIndex = skeletonData.ikConstraints.IndexOf(ikConstraint);
+					timeline.ikConstraintIndex = skeletonData.ikConstraints.IndexOf(constraint);
 					int frameIndex = 0;
 					foreach (IDictionary<String, Object> valueMap in values) {
 						float time = (float)valueMap["time"];
@@ -569,6 +578,30 @@ namespace Spine {
 				}
 			}
 
+			// Transform constraint timelines.
+			if (map.ContainsKey("transform")) {
+				foreach (KeyValuePair<String, Object> constraintMap in (IDictionary<String, Object>)map["transform"]) {
+					TransformConstraintData constraint = skeletonData.FindTransformConstraint(constraintMap.Key);
+					var values = (IList<Object>)constraintMap.Value;
+					var timeline = new TransformConstraintTimeline(values.Count);
+					timeline.transformConstraintIndex = skeletonData.transformConstraints.IndexOf(constraint);
+					int frameIndex = 0;
+					foreach (IDictionary<String, Object> valueMap in values) {
+						float time = (float)valueMap["time"];
+						float rotateMix = GetFloat(valueMap, "rotateMix", 1);
+						float translateMix = GetFloat(valueMap, "translateMix", 1);
+						float scaleMix = GetFloat(valueMap, "scaleMix", 1);
+						float shearMix = GetFloat(valueMap, "shearMix", 1);
+						timeline.SetFrame(frameIndex, time, rotateMix, translateMix, scaleMix, shearMix);
+						ReadCurve(timeline, frameIndex, valueMap);
+						frameIndex++;
+					}
+					timelines.Add(timeline);
+					duration = Math.Max(duration, timeline.frames[timeline.FrameCount * 5 - 5]);
+				}
+			}
+
+			// FFD timelines.
 			if (map.ContainsKey("ffd")) {
 				foreach (KeyValuePair<String, Object> ffdMap in (IDictionary<String, Object>)map["ffd"]) {
 					Skin skin = skeletonData.FindSkin(ffdMap.Key);
@@ -689,7 +722,7 @@ namespace Spine {
 			Object curveObject = valueMap["curve"];
 			if (curveObject.Equals("stepped"))
 				timeline.SetStepped(frameIndex);
-			else if (curveObject is List<Object>) {
+			else if (curveObject is IList<Object>) {
 				var curve = (IList<Object>)curveObject;
 				timeline.SetCurve(frameIndex, (float)curve[0], (float)curve[1], (float)curve[2], (float)curve[3]);
 			}

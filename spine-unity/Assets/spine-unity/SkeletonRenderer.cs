@@ -268,7 +268,9 @@ namespace Spine.Unity {
 			var workingSubmeshInstructions = workingInstruction.submeshInstructions;	// Items array should not be cached. There is dynamic writing to this list.
 			workingSubmeshInstructions.Clear(false);
 
+			#if !SPINE_TK2D
 			bool isCustomSlotMaterialsPopulated = customSlotMaterials.Count > 0;
+			#endif
 
 			int vertexCount = 0;
 			int submeshVertexCount = 0;
@@ -355,18 +357,20 @@ namespace Spine.Unity {
 				submeshVertexCount += attachmentVertexCount;
 			}
 
-			workingSubmeshInstructions.Add(
-				new Spine.Unity.MeshGeneration.SubmeshInstruction {
-					skeleton = this.skeleton,
-					material = lastMaterial,
-					startSlot = submeshStartSlotIndex,
-					endSlot = drawOrderCount,
-					triangleCount = submeshTriangleCount,
-					firstVertexIndex = submeshFirstVertex,
-					vertexCount = submeshVertexCount,
-					forceSeparate = false
-				}
-			);
+			if (submeshVertexCount != 0) {
+				workingSubmeshInstructions.Add(
+					new Spine.Unity.MeshGeneration.SubmeshInstruction {
+						skeleton = this.skeleton,
+						material = lastMaterial,
+						startSlot = submeshStartSlotIndex,
+						endSlot = drawOrderCount,
+						triangleCount = submeshTriangleCount,
+						firstVertexIndex = submeshFirstVertex,
+						vertexCount = submeshVertexCount,
+						forceSeparate = false
+					}
+				);
+			}
 
 			workingInstruction.vertexCount = vertexCount;
 			workingInstruction.immutableTriangles = this.immutableTriangles;
