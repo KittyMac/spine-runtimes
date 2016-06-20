@@ -88,14 +88,28 @@ namespace Spine {
 		}
 		#endif // WINDOWS_STOREAPP
 
+		public SkeletonData ReadSkeletonData (TextReader reader) {
+			if (reader == null) throw new ArgumentNullException("reader cannot be null.");
+
+			var root = Json.Deserialize (reader) as IDictionary<String, Object>;
+
+			return ReadSkeletonData (root);
+		}
+
 		public SkeletonData ReadSkeletonData (byte[] jsonBytes) {
-			if (jsonBytes == null) throw new ArgumentNullException("reader cannot be null.");
+			if (jsonBytes == null)
+				throw new ArgumentNullException ("json bytes cannot be null.");
+
+			var root = Json.Deserialize (jsonBytes) as IDictionary<String, Object>;
+
+			return ReadSkeletonData (root);
+		}
+
+		public SkeletonData ReadSkeletonData (IDictionary<String, Object> root) {
+			if (root == null) throw new Exception("Invalid JSON.");
 
 			var scale = this.Scale;
 			var skeletonData = new SkeletonData();
-
-			var root = Json.Deserialize(jsonBytes) as IDictionary<String, Object>;
-			if (root == null) throw new Exception("Invalid JSON.");
 
 			// Skeleton.
 			if (root.ContainsKey("skeleton")) {
@@ -367,8 +381,8 @@ namespace Spine {
 					if (parent == null) {
 						float[] uvs = GetFloatArray(map, "uvs", 1);
 						float[] vertices = GetFloatArray(map, "vertices", 1);
-						var weights = new IList<float>(uvs.Length * 3 * 3);
-						var bones = new IList<int>(uvs.Length * 3);
+						var weights = new List<float>(uvs.Length * 3 * 3);
+						var bones = new List<int>(uvs.Length * 3);
 						for (int i = 0, n = vertices.Length; i < n;) {
 							int boneCount = (int)vertices[i++];
 							bones.Add(boneCount);

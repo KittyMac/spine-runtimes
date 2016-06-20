@@ -675,32 +675,6 @@ namespace Spine.Unity.Editor {
 			return arr;
 		}
 
-		public static bool IsValidSpineData (TextAsset asset) {
-			if (asset.name.Contains(".skel")) return true;
-
-			object obj = null;
-			try {
-				obj = Json.Deserialize(new StringReader(asset.text));
-			} catch (System.Exception) {
-			}
-			if (obj == null) {
-				Debug.LogError("Is not valid JSON");
-				return false;
-			}
-
-			IDictionary<string, object> root = (IDictionary<string, object>)obj;
-
-			if (!root.ContainsKey("skeleton"))
-				return false;
-
-			IDictionary<string, object> skeletonInfo = (IDictionary<string, object>)root["skeleton"];
-
-			string spineVersion = (string)skeletonInfo["spine"];
-			//TODO:  reject old versions
-
-			return true;
-		}
-
 		static AtlasAsset IngestSpineAtlas (TextAsset atlasText) {
 			if (atlasText == null) {
 				Debug.LogWarning("Atlas source cannot be null!");
@@ -714,7 +688,7 @@ namespace Spine.Unity.Editor {
 
 			AtlasAsset atlasAsset = (AtlasAsset)AssetDatabase.LoadAssetAtPath(atlasPath, typeof(AtlasAsset));
 
-			IList<Material> vestigialMaterials = new IList<Material>();
+			List<Material> vestigialMaterials = new List<Material>();
 
 			if (atlasAsset == null)
 				atlasAsset = AtlasAsset.CreateInstance<AtlasAsset>();
@@ -730,7 +704,7 @@ namespace Spine.Unity.Editor {
 			atlasStr = atlasStr.Replace("\r", "");
 
 			string[] atlasLines = atlasStr.Split('\n');
-			IList<string> pageFiles = new IList<string>();
+			List<string> pageFiles = new List<string>();
 			for (int i = 0; i < atlasLines.Length - 1; i++) {
 				if (atlasLines[i].Trim().Length == 0)
 					pageFiles.Add(atlasLines[i + 1].Trim());
@@ -944,24 +918,29 @@ namespace Spine.Unity.Editor {
 			if (asset.name.Contains(".skel")) return true;
 
 			object obj = null;
-			obj = Json.Deserialize(new StringReader(asset.text));
-
+			try {
+				obj = Json.Deserialize(new StringReader(asset.text));
+			} catch (System.Exception) {
+			}
 			if (obj == null) {
-				Debug.LogError("Is not valid JSON.");
+				Debug.LogError("Is not valid JSON");
 				return false;
 			}
 
-			var root = obj as Dictionary<string, object>;
+			IDictionary<string, object> root = (IDictionary<string, object>)obj;
 			if (root == null) {
 				Debug.LogError("Parser returned an incorrect type.");
 				return false;
 			}
 
-			return root.ContainsKey("skeleton");
+			if (!root.ContainsKey("skeleton"))
+				return false;
 
 			// TODO: Warn users of old version incompatibility.
-			//			var skeletonInfo = (Dictionary<string, object>)root["skeleton"];
-			//			string spineVersion = (string)skeletonInfo["spine"];
+			/*IDictionary<string, object> skeletonInfo = (IDictionary<string, object>)root["skeleton"];
+			string spineVersion = (string)skeletonInfo["spine"];*/
+
+			return true;
 		}
 		#endregion
 
