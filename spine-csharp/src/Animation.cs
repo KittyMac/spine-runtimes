@@ -440,7 +440,7 @@ namespace Spine {
 		}
 
 		public void Apply (Skeleton skeleton, float lastTime, float time, ExposedList<Event> firedEvents, float alpha) {
-			if (alpha < 0.5f) {
+			if (alpha > 0.5f) {
 				return;
 			}
 			float[] frames = this.frames;
