@@ -772,7 +772,14 @@ namespace Spine.Unity.Editor {
 				Texture2D texture = (Texture2D)AssetDatabase.LoadAssetAtPath(texturePath, typeof(Texture2D));
 
 				TextureImporter texImporter = (TextureImporter)TextureImporter.GetAtPath(texturePath);
+
+				#if UNITY_5_5_OR_NEWER
+				texImporter.textureType = TextureImporterType.Default;
+				#else
 				texImporter.textureType = TextureImporterType.Advanced;
+				#endif
+
+
 				texImporter.textureFormat = TextureImporterFormat.AutomaticTruecolor;
 				texImporter.mipmapEnabled = false;
 				texImporter.alphaIsTransparency = false;
